@@ -1,0 +1,88 @@
+/* ===== CSS Variables ===== */
+:root {
+  /* Light theme (default) */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f3f4;
+  --bg-hover: #e8eaed;
+  --bg-card: #ffffff;
+  --bg-sidebar: #f8f9fa;
+  --bg-code: #f1f3f4;
+  --bg-thinking: #fff8e1;
+  --text-primary: #202124;
+  --text-secondary: #5f6368;
+  --text-tertiary: #80868b;
+  --text-inverse: #ffffff;
+  --border-color: #dadce0;
+  --border-light: #e8eaed;
+  --accent-primary: #00bfa5;
+  --accent-secondary: #00897b;
+  --accent-hover: #009688;
+  --accent-light: #e0f2f1;
+  --thinking-border: #ffd54f;
+  --thinking-text: #f57f17;
+  --result-border: #00bfa5;
+  --result-text: #00897b;
+  --shadow-sm: 0 1px 2px rgba(60,64,67,0.1);
+  --shadow-md: 0 4px 12px rgba(60,64,67,0.15);
+  --shadow-lg: 0 8px 24px rgba(60,64,67,0.2);
+  --transition: all 0.3s ease;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --bg-tertiary: #2d2d2d;
+  --bg-hover: #3c3c3c;
+  --bg-card: #242424;
+  --bg-sidebar: #1a1a1a;
+  --bg-code: #2d2d2d;
+  --bg-thinking: #2d2920;
+  --text-primary: #e8eaed;
+  --text-secondary: #bdc1c6;
+  --text-tertiary: #9aa0a6;
+  --text-inverse: #202124;
+  --border-color: #3c4043;
+  --border-light: #2d2d2d;
+  --accent-primary: #00bfa5;
+  --accent-secondary: #4db6ac;
+  --accent-hover: #26a69a;
+  --accent-light: #004d40;
+  --thinking-border: #ff8f00;
+  --thinking-text: #ffb74d;
+  --result-border: #00bfa5;
+  --result-text: #80cbc4;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+#app {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}

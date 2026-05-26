@@ -6,6 +6,13 @@ spring:
       base-url: http://localhost:11434
       chat:
         model: deepseek-r1:1.5b
+
+    openai:
+      base-url: https://api.siliconflow.cn
+      api-key: ${OPEN_AI_KEY}
+      chat:
+        model: Qwen/Qwen3.6-35B-A3B
+
 logging:
   level:
     org.springframework.ai.chat.client.advisor: debug

@@ -118,6 +118,7 @@
             </div>
           </div>
         </div>
+
       </div>
 
       <!-- 输入区域 -->
@@ -165,7 +166,6 @@ const props = defineProps({
 
 const moduleNames = {
   chatbot: '对话机器人',
-  honghong: '哄哄模拟器',
   customerservice: '智能客服',
   chatpdf: 'ChatPDF'
 }
@@ -173,7 +173,6 @@ const moduleNames = {
 // 前端模块名 → 后端 ServiceTypes 枚举值映射
 const serviceTypeMap = {
   chatbot: 'chat',
-  honghong: 'honghong',
   customerservice: 'service',
   chatpdf: 'chatPDF'
 }
@@ -963,11 +962,11 @@ watch(currentMessages, scrollToBottom, { deep: true })
     bottom: 0;
     z-index: 100;
   }
-  
+
   .message {
     padding: 16px 20px;
   }
-  
+
   .input-area {
     padding: 12px 20px;
   }

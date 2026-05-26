@@ -41,8 +41,11 @@ ChatRobot/
 │       ├── config/
 │       │   ├── CommonConfiguration.java # ChatClient + ChatMemory 配置
 │       │   └── MvcConfiguration.java    # CORS 跨域配置
+│       ├── constants/
+│       │   └── SystemConstants.java     # 哄哄模拟器系统提示词
 │       ├── controller/
 │       │   ├── ChatController.java      # 聊天接口（普通 + 流式）
+│       │   ├── GameController.java      # 哄哄模拟器游戏接口
 │       │   └── ChatHistoryController.java # 历史记录查询接口
 │       ├── entity/vo/
 │       │   └── MessageVO.java           # 返回给前端的消息视图对象
@@ -61,7 +64,8 @@ ChatRobot/
             ├── router/index.js          # 路由定义
             └── views/
                 ├── HomeView.vue         # 首页（模块卡片）
-                └── ChatBotView.vue      # 聊天页面（核心）
+                ├── ChatBotView.vue      # 对话机器人（多会话管理）
+                └── HongHongSimulatorView.vue # 哄哄模拟器（单次游戏）
 ```
 
 ## 架构与数据流
@@ -72,12 +76,13 @@ ChatRobot/
 ┌─────────────────────────────────────────────────────────┐
 │                    浏览器 (Vue 3)                        │
 │  ┌──────────────┐    ┌──────────────────────────────┐   │
-│  │  HomeView    │    │  ChatBotView                  │   │
-│  │  模块卡片    │───▶│  侧边栏 + 消息区 + 输入框     │   │
+│  │  HomeView    │    │  ChatBotView /               │   │
+│  │  模块卡片    │───▶│  HongHongSimulatorView      │   │
 │  └──────────────┘    │  (流式读取 + 打字机效果)      │   │
 │                      └──────────┬───────────────────┘   │
 └─────────────────────────────────┼───────────────────────┘
                                   │ HTTP (GET /api/ai/chat/stream)
+                                  │        (GET /api/ai/game)
                                   ▼
 ┌─────────────────────────────────────────────────────────┐
 │              Vite Dev Server (代理)                      │
@@ -88,21 +93,21 @@ ChatRobot/
 ┌─────────────────────────────────────────────────────────┐
 │              Spring Boot 后端                            │
 │                                                         │
-│  ChatController          ChatHistoryController           │
-│  /ai/chat (阻塞)         /ai/history/{type}              │
-│  /ai/chat/stream (流式)  /ai/history/{type}/{chatID}     │
-│        │                        │                        │
-│        ▼                        ▼                        │
-│  ChatClient              ChatMemory (Spring AI)          │
-│  (构建请求+顾问链)       ChatHistoryRepository            │
-│        │                (会话ID管理)                      │
-│        ▼                                                 │
-│  OllamaChatModel                                         │
-│  http://localhost:11434                                  │
-│        │                                                 │
-│        ▼                                                 │
-│  Ollama 本地服务                                          │
-│  deepseek-r1:1.5b                                        │
+│  ChatController   GameController   ChatHistoryController │
+│  /ai/chat/stream  /ai/game         /ai/history/...      │
+│        │              │                  │               │
+│        ▼              ▼                  ▼               │
+│  ChatClient      gameChatClient   ChatMemory + Repo     │
+│  (编码助手)       (女友角色扮演)   (会话记忆 + ID管理)    │
+│        │              │                                 │
+│        └──────────────┘                                 │
+│               │                                         │
+│               ▼                                         │
+│        OllamaChatModel                                   │
+│        http://localhost:11434                            │
+│               │                                         │
+│               ▼                                         │
+│        Ollama 本地服务 (deepseek-r1:1.5b)                │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -173,6 +178,52 @@ while (true) {
 
 打字机效果通过 `setInterval(processTypewriter, 15)` 实现，每 15ms 从队列取字符渲染。队列积压较多时自动加速（批量取 5 个字符），保证流畅性。
 
+#### 多角色 ChatClient 配置
+
+```java
+// CommonConfiguration.java
+@Bean
+public ChatClient chatClient(OllamaChatModel model, ChatMemory chatMemory) {
+    return ChatClient.builder(model)
+        .defaultSystem("你是一个智能编码助手，名称叫Lcode...")
+        .defaultAdvisors(new SimpleLoggerAdvisor(), MessageChatMemoryAdvisor.builder(chatMemory).build())
+        .build();
+}
+
+@Bean
+public ChatClient gameChatClient(OpenAiChatModel model, ChatMemory chatMemory) {
+    return ChatClient.builder(model)
+        .defaultSystem(SystemConstants.GAME_PROMPT)  // 女友角色扮演提示词
+        .defaultAdvisors(new SimpleLoggerAdvisor(), MessageChatMemoryAdvisor.builder(chatMemory).build())
+        .build();
+}
+```
+
+不同模块使用独立的 `ChatClient` Bean，通过不同的 `defaultSystem` 提示词实现角色切换：
+- `chatClient`：智能编码助手 Lcode
+- `gameChatClient`：哄哄模拟器女友角色
+
+#### 哄哄模拟器游戏机制
+
+**后端规则**（`SystemConstants.GAME_PROMPT`）：
+- 用户扮演男友，AI 扮演生气的女朋友
+- 初始原谅值 20/100，每次交互根据回复内容增减
+- 得分等级：-10（非常生气）→ -5（生气）→ 0（正常）→ +5（开心）→ +10（非常开心）
+- 原谅值 ≥ 100 通关，≤ 0 失败
+
+**AI 回复格式**：
+```
+（心情）{女友说的话}
+得分：{+-原值增减}
+原值：{当前原值}/100
+```
+
+**前端解析**（`parseGameResult`）：
+- 提取 `（心情）` → 显示心情标签
+- 提取 `得分：+-x` → 显示得分标签
+- 提取 `原值：x/100` → 更新原谅值进度条
+- 去除元信息 → 只保留女友说的话显示在聊天区
+
 #### Thinking 过程解析
 
 deepseek-r1 模型会在回答中插入 `<thinking>` 标签包裹思考过程。前端通过 `parseBuffer()` 函数实时解析流数据，将思考内容和正式回答分开显示：
@@ -201,14 +252,27 @@ CSS 中定义了 `:root` 和 `[data-theme="dark"]` 两套变量，切换时修�
 - 移动端侧边栏变为 fixed 定位的抽屉
 - 消息区域自适应宽度，最大 900px 居中
 
+### 双视图模式
+
+**ChatBotView（对话机器人）**：
+- 多会话管理：侧边栏显示历史会话列表，支持切换
+- 持久化：通过 `chatID` 关联后端 `ChatMemory`，可恢复历史消息
+- 通用视图：服务于 `chatbot` / `customerservice` / `chatpdf` 三个模块
+
+**HongHongSimulatorView（哄哄模拟器）**：
+- 单次游戏模式：无多会话管理，点进来即玩一局
+- 游戏化 UI：原谅值进度条、心情标签、得分标签、通关/失败提示
+- 弹窗交互：开始新游戏时弹出
+
 ## 后端亮点
 
 ### RESTful 接口设计
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
-| `/ai/chat?prompt=xxx` | GET | 普通阻塞式聊天 |
-| `/ai/chat/stream?prompt=xxx&chatID=xxx` | GET | 流式聊天 |
+| `/ai/chat?prompt=xxx` | GET | 普通阻塞式聊天（对话机器人） |
+| `/ai/chat/stream?prompt=xxx&chatID=xxx` | GET | 流式聊天（对话机器人） |
+| `/ai/game?prompt=xxx&chatID=xxx` | GET | 哄哄模拟器游戏流式接口 |
 | `/ai/history/{type}` | GET | 获取某业务类型下的所有会话ID |
 | `/ai/history/{type}/{chatID}` | GET | 获取某会话的详细消息历史 |
 
@@ -287,6 +351,7 @@ npm run dev
 - Spring Boot 应用搭建与配置
 - Spring AI 框架集成本地大模型
 - ChatClient / ChatMemory / Advisor 等 AI 抽象的使用
+- 多角色 ChatClient 配置（不同系统提示词实现角色切换）
 - 流式响应（Flux / Server-Sent Events 思路）
 - RESTful API 设计与接口版本管理
 - 接口 + 实现的仓储模式（为后续持久化做准备）
@@ -294,8 +359,10 @@ npm run dev
 **前端方面：**
 - Vue 3 Composition API（`<script setup>`、`ref`、`computed`、`inject`）
 - Vue Router 路由配置与动态参数
+- 双视图模式：通用多会话视图 vs 单次游戏视图
 - ReadableStream 流式数据读取与解析
 - 打字机效果的实现（队列 + 定时器）
+- 正则解析结构化文本（游戏元信息提取）
 - CSS 变量实现暗色/亮色主题
 - 响应式布局与移动端适配
 

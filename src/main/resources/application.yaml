@@ -1,11 +1,24 @@
-﻿spring:
-  #杩炴帴姹狅細
+spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  #连接池：
   datasource:
 #    type: com.alibaba.druid.pool.DruidDataSource
     url: jdbc:mysql://localhost:3306/itheima_ai
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: 123456
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      client-type: jedis
+
+
 
   application:
     name: ChatRobot
@@ -14,12 +27,19 @@
       base-url: http://localhost:11434
       chat:
         model: deepseek-r1:1.5b
-
     openai:
-      base-url: https://api.siliconflow.cn
+      base-url: https://api.siliconflow.cn/v1
       api-key: ${OPEN_AI_KEY}
       chat:
         model: Qwen/Qwen3.6-35B-A3B
+      embedding:
+        model: Qwen/Qwen3-Embedding-0.6B
+        dimensions: 1024
+#    vectorstore:
+#      redis:
+#        index-name: spring_ai_index
+#        initialize-schema: true
+#        prefix: "docs:" #向量前缀
 
 logging:
   level:

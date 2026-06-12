@@ -81,6 +81,19 @@
             <div v-else class="avatar ai-avatar">AI</div>
           </div>
           <div class="message-content">
+            <!-- 用户附件展示 -->
+            <div v-if="message.attachments && message.attachments.length > 0" class="message-attachments">
+              <div v-for="(att, i) in message.attachments" :key="i" class="msg-attachment">
+                <img v-if="att.preview" :src="att.preview" class="attachment-img" />
+                <div v-else class="attachment-file-badge">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <span>{{ att.name }}</span>
+                </div>
+              </div>
+            </div>
             <!-- 思考过程 - 橙黄色 -->
             <div v-if="message.thinking || message.isThinking" class="thinking-section">
               <div class="thinking-header" @click="message.showThinking = !message.showThinking">
@@ -120,7 +133,42 @@
 
       <!-- 输入区域 -->
       <div class="input-area">
+        <!-- 附件预览区 -->
+        <div v-if="attachedFiles.length > 0" class="attachments-preview">
+          <div v-for="(file, index) in attachedFiles" :key="index" class="attachment-item">
+            <img v-if="file.file.type.startsWith('image/')" :src="file.preview" class="attachment-thumb" />
+            <div v-else class="attachment-file-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <span class="attachment-name">{{ file.file.name }}</span>
+            <button class="attachment-remove" @click="removeFile(index)" title="移除">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
         <div class="input-container">
+          <!-- 附件按钮 -->
+          <button class="attach-btn" @click="triggerFileInput" title="添加附件" :disabled="isLoading">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
+          <input 
+            type="file" 
+            ref="fileInputRef" 
+            multiple 
+            accept="image/*,.pdf,.txt,.doc,.docx"
+            style="display: none" 
+            @change="handleFileSelect"
+          />
+          
           <textarea
             v-model="userInput"
             class="chat-input"
@@ -132,9 +180,9 @@
           ></textarea>
           <button 
             class="send-btn"
-            :class="{ 'active': userInput.trim() && !isLoading }"
+            :class="{ 'active': (userInput.trim() || attachedFiles.length > 0) && !isLoading }"
             @click="sendMessage"
-            :disabled="!userInput.trim() || isLoading"
+            :disabled="(!userInput.trim() && attachedFiles.length === 0) || isLoading"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="22" y1="2" x2="11" y2="13"/>
@@ -142,7 +190,7 @@
             </svg>
           </button>
         </div>
-        <p class="input-tip">按 Enter 发送，Shift + Enter 换行</p>
+        <p class="input-tip">按 Enter 发送，Shift + Enter 换行 | 支持图片、PDF、文档附件</p>
       </div>
     </main>
   </div>
@@ -162,8 +210,7 @@ const props = defineProps({
 })
 
 const moduleNames = {
-  chatbot: '对话机器人',
-  chatpdf: 'ChatPDF'
+  chatbot: '对话机器人'
 }
 
 const welcomeConfig = {
@@ -171,18 +218,12 @@ const welcomeConfig = {
     icon: `<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>`,
     title: '有什么可以帮你的？',
     desc: '我是你的智能编码助手，可以帮你解答编程问题、优化代码、提供技术建议等。'
-  },
-  chatpdf: {
-    icon: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>`,
-    title: '与你的 PDF 对话',
-    desc: '上传 PDF 文档，我可以帮你快速提取关键信息、回答问题、总结内容。'
   }
 }
 
 // 前端模块名 → 后端 ServiceTypes 枚举值映射
 const serviceTypeMap = {
-  chatbot: 'chat',
-  chatpdf: 'chatPDF'
+  chatbot: 'chat'
 }
 
 const sidebarCollapsed = ref(false)
@@ -190,7 +231,9 @@ const userInput = ref('')
 const isLoading = ref(false)
 const messagesContainer = ref(null)
 const inputRef = ref(null)
+const fileInputRef = ref(null)
 const currentChatIndex = ref(0)
+const attachedFiles = ref([])
 
 const generateChatID = () => {
   return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
@@ -314,6 +357,29 @@ const formatMessage = (content) => {
     .replace(/\n/g, '<br>')
 }
 
+const triggerFileInput = () => {
+  fileInputRef.value?.click()
+}
+
+const handleFileSelect = (e) => {
+  const files = Array.from(e.target.files)
+  files.forEach(file => {
+    const item = { file, preview: null }
+    if (file.type.startsWith('image/')) {
+      item.preview = URL.createObjectURL(file)
+    }
+    attachedFiles.value.push(item)
+  })
+  e.target.value = ''
+}
+
+const removeFile = (index) => {
+  const removed = attachedFiles.value.splice(index, 1)
+  if (removed[0]?.preview) {
+    URL.revokeObjectURL(removed[0].preview)
+  }
+}
+
 // ========== 打字机效果 + 流式处理 ==========
 
 const THINK_START_TAGS = ['<thinking>', ' thinking']
@@ -374,16 +440,23 @@ const parseBuffer = (buffer, currentInThinking) => {
 
 const sendMessage = async () => {
   const message = userInput.value.trim()
-  if (!message || isLoading.value) return
+  if ((!message && attachedFiles.value.length === 0) || isLoading.value) return
 
-  const userMessage = { role: 'user', content: message }
+  const attachments = attachedFiles.value.map(f => ({
+    name: f.file.name,
+    preview: f.preview
+  }))
+
+  const userMessage = { role: 'user', content: message || '(附件)', attachments }
 
   if (!chatHistory.value[currentChatIndex.value]) {
     chatHistory.value[currentChatIndex.value] = { title: message.slice(0, 20), messages: [] }
   }
 
   chatHistory.value[currentChatIndex.value].messages.push(userMessage)
+  const filesToSend = [...attachedFiles.value]
   userInput.value = ''
+  attachedFiles.value = []
   isLoading.value = true
 
   if (inputRef.value) inputRef.value.style.height = 'auto'
@@ -394,7 +467,16 @@ const sendMessage = async () => {
     const chatID = currentChat?.chatID || generateChatID()
     if (!currentChat.chatID) currentChat.chatID = chatID
 
-    const response = await fetch(`/api/ai/chat/stream?prompt=${encodeURIComponent(message)}&chatID=${encodeURIComponent(chatID)}`)
+    let response
+    if (filesToSend.length > 0) {
+      const formData = new FormData()
+      formData.append('prompt', message || '请描述这个文件')
+      formData.append('chatId', chatID)
+      filesToSend.forEach(f => formData.append('files', f.file))
+      response = await fetch('/api/ai/chat/stream', { method: 'POST', body: formData })
+    } else {
+      response = await fetch(`/api/ai/chat/stream?prompt=${encodeURIComponent(message)}&chatId=${encodeURIComponent(chatID)}`)
+    }
     if (!response.ok) throw new Error('网络请求失败')
 
     const reader = response.body.getReader()
@@ -976,6 +1058,118 @@ watch(currentMessages, scrollToBottom, { deep: true })
   font-size: 12px;
   color: var(--text-tertiary);
   margin: 8px 0 0 0;
+}
+
+.attach-btn {
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.attach-btn:hover:not(:disabled) {
+  color: var(--accent-primary);
+  background: var(--accent-light);
+}
+
+.attach-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.attachments-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 900px;
+  margin: 0 auto 8px auto;
+  padding: 0 4px;
+}
+
+.attachment-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.attachment-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.attachment-file-icon {
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+}
+
+.attachment-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-remove {
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.attachment-remove:hover {
+  color: #e53935;
+  background: rgba(229, 57, 53, 0.1);
+}
+
+.message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.msg-attachment {
+  display: flex;
+  align-items: center;
+}
+
+.attachment-img {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+}
+
+.attachment-file-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 @media (max-width: 768px) {

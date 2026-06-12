@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import ChatBotView from '../views/ChatBotView.vue'
 import HongHongSimulatorView from '../views/HongHongSimulatorView.vue'
 import CustomerServiceView from '../views/CustomerServiceView.vue'
+import ChatPdfView from '../views/ChatPdfView.vue'
 
 const routes = [
   {
@@ -23,6 +24,11 @@ const routes = [
     path: '/chat/customerservice',
     name: 'customerservice',
     component: CustomerServiceView
+  },
+  {
+    path: '/chat/chatpdf',
+    name: 'chatpdf',
+    component: ChatPdfView
   },
   {
     path: '/chat/:moduleName',

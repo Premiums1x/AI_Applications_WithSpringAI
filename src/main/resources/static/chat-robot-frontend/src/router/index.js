@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ChatBotView from '../views/ChatBotView.vue'
 import HongHongSimulatorView from '../views/HongHongSimulatorView.vue'
+import CustomerServiceView from '../views/CustomerServiceView.vue'
 
 const routes = [
   {
@@ -17,6 +18,11 @@ const routes = [
     path: '/chat/honghong',
     name: 'honghong',
     component: HongHongSimulatorView
+  },
+  {
+    path: '/chat/customerservice',
+    name: 'customerservice',
+    component: CustomerServiceView
   },
   {
     path: '/chat/:moduleName',

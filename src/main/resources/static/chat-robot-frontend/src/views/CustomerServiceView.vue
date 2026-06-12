@@ -45,7 +45,7 @@
               <line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <h2 class="chat-title">{{ moduleNames[props.moduleName] || props.moduleName }}</h2>
+          <h2 class="chat-title">智能客服</h2>
         </div>
         <div class="header-actions">
           <button class="action-btn" @click="toggleTheme" title="切换主题">
@@ -64,10 +64,18 @@
       <!-- 消息区域 -->
       <div class="messages-area" ref="messagesContainer">
         <div v-if="currentMessages.length === 0" class="welcome-screen">
-          <div class="welcome-icon" v-html="welcomeIcon">
+          <div class="welcome-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
           </div>
-          <h2>{{ welcomeTitle }}</h2>
-          <p>{{ welcomeDesc }}</p>
+          <h2>你好，我是小黑！🤗</h2>
+          <p>我是黑马程序员的智能课程顾问，可以帮你查询课程、<br>了解校区信息，还能帮你预约试听哦~</p>
+          <div class="welcome-tips">
+            <span>💡 试试问我："我想学编程，有什么课程推荐？"</span>
+          </div>
         </div>
 
         <div 
@@ -78,7 +86,7 @@
         >
           <div class="message-avatar">
             <div v-if="message.role === 'user'" class="avatar user-avatar">我</div>
-            <div v-else class="avatar ai-avatar">AI</div>
+            <div v-else class="avatar cs-avatar">小黑</div>
           </div>
           <div class="message-content">
             <!-- 思考过程 - 橙黄色 -->
@@ -124,7 +132,7 @@
           <textarea
             v-model="userInput"
             class="chat-input"
-            placeholder="输入你的问题..."
+             placeholder="输入你的问题，小黑为你解答..."
             rows="1"
             @keydown.enter.prevent="sendMessage"
             @input="autoResize"
@@ -154,36 +162,7 @@ import { themeSymbol } from '../main.js'
 
 const { isDark, toggleTheme } = inject(themeSymbol)
 
-const props = defineProps({
-  moduleName: {
-    type: String,
-    required: true
-  }
-})
-
-const moduleNames = {
-  chatbot: '对话机器人',
-  chatpdf: 'ChatPDF'
-}
-
-const welcomeConfig = {
-  chatbot: {
-    icon: `<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>`,
-    title: '有什么可以帮你的？',
-    desc: '我是你的智能编码助手，可以帮你解答编程问题、优化代码、提供技术建议等。'
-  },
-  chatpdf: {
-    icon: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>`,
-    title: '与你的 PDF 对话',
-    desc: '上传 PDF 文档，我可以帮你快速提取关键信息、回答问题、总结内容。'
-  }
-}
-
-// 前端模块名 → 后端 ServiceTypes 枚举值映射
-const serviceTypeMap = {
-  chatbot: 'chat',
-  chatpdf: 'chatPDF'
-}
+const serviceType = 'service'
 
 const sidebarCollapsed = ref(false)
 const userInput = ref('')
@@ -199,7 +178,6 @@ const generateChatID = () => {
 const chatHistory = ref([])
 
 onMounted(async () => {
-  const serviceType = serviceTypeMap[props.moduleName] || props.moduleName
   let chatIds = []
   try {
     const res = await fetch(`/api/ai/history/${serviceType}`)
@@ -233,22 +211,6 @@ const currentMessages = computed(() => {
   return chatHistory.value[currentChatIndex.value]?.messages || []
 })
 
-const currentWelcome = computed(() => {
-  return welcomeConfig[props.moduleName] || welcomeConfig.chatbot
-})
-
-const welcomeIcon = computed(() => {
-  return `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">${currentWelcome.value.icon}</svg>`
-})
-
-const welcomeTitle = computed(() => {
-  return currentWelcome.value.title
-})
-
-const welcomeDesc = computed(() => {
-  return currentWelcome.value.desc
-})
-
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
@@ -264,7 +226,6 @@ const selectChat = async (index) => {
   if (!chat || chat.messages.length > 0) return
 
   // 从后端拉取该会话的历史消息
-  const serviceType = serviceTypeMap[props.moduleName] || props.moduleName
   try {
     const res = await fetch(`/api/ai/history/${serviceType}/${chat.chatID}`)
     if (res.ok) {
@@ -309,6 +270,20 @@ const scrollToBottom = () => {
 const formatMessage = (content) => {
   if (!content) return ''
   return content
+    .replace(/\|([\s\S]*?)\|/g, (match) => {
+      if (match.includes('---') || match.includes('\n')) {
+        const lines = match.slice(1, -1).trim().split('\n')
+        if (lines.length >= 2 && lines[1].includes('---')) {
+          const headers = lines[0].split('|').map(h => h.trim()).filter(Boolean)
+          const rows = lines.slice(2).filter(l => l.trim()).map(l => {
+            const cells = l.split('|').map(c => c.trim()).filter(Boolean)
+            return '<tr>' + cells.map(c => '<td>' + c + '</td>').join('') + '</tr>'
+          })
+          return '<table class="md-table"><thead><tr>' + headers.map(h => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>'
+        }
+      }
+      return match
+    })
     .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n/g, '<br>')
@@ -394,7 +369,7 @@ const sendMessage = async () => {
     const chatID = currentChat?.chatID || generateChatID()
     if (!currentChat.chatID) currentChat.chatID = chatID
 
-    const response = await fetch(`/api/ai/chat/stream?prompt=${encodeURIComponent(message)}&chatID=${encodeURIComponent(chatID)}`)
+    const response = await fetch(`/api/ai/service?prompt=${encodeURIComponent(message)}&chatID=${encodeURIComponent(chatID)}`)
     if (!response.ok) throw new Error('网络请求失败')
 
     const reader = response.body.getReader()
@@ -730,8 +705,17 @@ watch(currentMessages, scrollToBottom, { deep: true })
 
 .welcome-screen p {
   font-size: 14px;
-  max-width: 400px;
-  line-height: 1.6;
+  max-width: 420px;
+  line-height: 1.8;
+}
+
+.welcome-tips {
+  margin-top: 20px;
+  padding: 10px 16px;
+  background: var(--accent-light);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--accent-secondary);
 }
 
 .message {
@@ -776,6 +760,10 @@ watch(currentMessages, scrollToBottom, { deep: true })
   background: var(--accent-primary);
 }
 
+.cs-avatar {
+  background: linear-gradient(135deg, #FF6B6B 0%, #EE5A24 100%);
+}
+
 .message-content {
   flex: 1;
   min-width: 0;
@@ -811,6 +799,39 @@ watch(currentMessages, scrollToBottom, { deep: true })
   background: transparent;
   padding: 0;
   color: var(--text-primary);
+}
+
+.message-text :deep(table.md-table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message-text :deep(table.md-table th) {
+  background: var(--bg-tertiary);
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.message-text :deep(table.md-table td) {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+}
+
+.message-text :deep(table.md-table tr:last-child td) {
+  border-bottom: none;
+}
+
+.message-text :deep(table.md-table tr:hover td) {
+  background: var(--bg-hover);
 }
 
 /* 思考过程 - 橙黄色 */

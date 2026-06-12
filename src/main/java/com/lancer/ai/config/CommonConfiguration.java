@@ -2,6 +2,7 @@ package com.lancer.ai.config;
 
 
 import com.lancer.ai.constants.SystemConstants;
+import com.lancer.ai.tools.CourseTools;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
@@ -42,6 +43,18 @@ public class CommonConfiguration {
                 .defaultAdvisors(
                         new SimpleLoggerAdvisor(),
                         MessageChatMemoryAdvisor.builder(chatMemory).build() )//日志环绕增强
+                .build();//创建客户端
+    }
+
+    @Bean
+    public ChatClient serviceChatClient(OpenAiChatModel model, ChatMemory chatMemory, CourseTools courseTools){
+        return ChatClient
+                .builder(model)//创建工厂，传入模型
+                .defaultSystem(SystemConstants.Customer_Service_PROMPT)//提示词
+                .defaultAdvisors(
+                        new SimpleLoggerAdvisor(),
+                        MessageChatMemoryAdvisor.builder(chatMemory).build() )//日志环绕增强
+                .defaultTools(courseTools)
                 .build();//创建客户端
     }
 }

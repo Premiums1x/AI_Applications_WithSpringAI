@@ -1,4 +1,12 @@
-spring:
+﻿spring:
+  #杩炴帴姹狅細
+  datasource:
+#    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://localhost:3306/itheima_ai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+
   application:
     name: ChatRobot
   ai:
